@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+
+# Entorno virtual
+venv/
+env/
+.venv/
+
+# Base de datos (no subir datos de producción)
+*.db
+*.db-journal
+database_backup_pre_migration.db
+
+# Archivos temporales y de sistema
+*.tmp
+*.log
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Archivos de prueba temporales
+check_db.py
+
+# Carpetas de salida generadas
+facturas/
+Hojas_de_Servicio/
+Excel_Ventas/
+Inventario_Excel/
+Servicios_Excel/
+
+# Fotos de usuarios (datos privados)
+fotos/
