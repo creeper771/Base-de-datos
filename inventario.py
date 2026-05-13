@@ -55,10 +55,10 @@ class Inventario(Servicios_realizados):
         self.label7 = tk.Label(lblframe_seleccion, text="No. Serie:", font="arial 12", bg="#85c1e9", wraplength=300)
         self.label7.place(x=5, y=30)
 
-        self.label2 = tk.Label(lblframe_seleccion, text="P. Compra:", font="arial 12", bg="#85c1e9", wraplength=300)
+        self.label2 = tk.Label(lblframe_seleccion, text="Precio costo:", font="arial 12", bg="#85c1e9", wraplength=300)
         self.label2.place(x=5, y=55)
 
-        self.label3 = tk.Label(lblframe_seleccion, text="P. Venta:", font="arial 12", bg="#85c1e9")
+        self.label3 = tk.Label(lblframe_seleccion, text="Precio venta:", font="arial 12", bg="#85c1e9")
         self.label3.place(x=5, y=80)
 
         self.label4 = tk.Label(lblframe_seleccion, text="Stock:", font="arial 12", bg="#85c1e9")
@@ -400,12 +400,12 @@ class Inventario(Servicios_realizados):
             serie = ""  # Asignar un valor predeterminado si es None
         entry_serie.insert(0, serie)
 
-        tk.Label(top, text="Precio Venta:", font="arial 12 bold", bg="#85c1e9").place(x=20, y=100, width=80, height=25)
+        tk.Label(top, text="P. Venta:", font="arial 12 bold", bg="#85c1e9").place(x=20, y=100, width=80, height=25)
         entry_preventa = ttk.Entry(top, font="arial 12 bold")
         entry_preventa.place(x=120, y=100, width=250, height=30)
         entry_preventa.insert(0, preventa)
 
-        tk.Label(top, text="Precio Costo:", font="arial 12 bold", bg="#85c1e9").place(x=20, y=135, width=140, height=25)
+        tk.Label(top, text="P. Costo:", font="arial 12 bold", bg="#85c1e9").place(x=20, y=135, width=80, height=25)
         entry_precosto = ttk.Entry(top, font="arial 12 bold")
         entry_precosto.place(x=120, y=140, width=250, height=30)
         entry_precosto.insert(0, precosto)
