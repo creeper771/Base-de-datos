@@ -2,6 +2,7 @@ from tkinter import *
 from servicios_realizados import Servicios_realizados
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
+import sqlite3
 from utils.paths import get_resource_path
 from database.inventario_dao import InventarioDAO
 from PIL import Image, ImageTk
@@ -522,5 +523,5 @@ class Inventario(Servicios_realizados):
             self.servicios_combobox()
 
             messagebox.showinfo("Éxito", f"El producto '{producto_seleccionado}' ha sido eliminado correctamente.")
-        except sqlite3.Error as e:
+        except (sqlite3.Error, ValueError) as e:
             messagebox.showerror("Error", f"Error al eliminar el producto: {e}")

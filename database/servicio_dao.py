@@ -1,4 +1,9 @@
+import datetime
+import sqlite3
+
 from database.db_manager import DBManager
+from database.hojas_schema import HOJAS_CREATE_IF_NOT_EXISTS, HOJAS_DATA_COLUMNS
+
 
 class ServicioDAO:
     def __init__(self):
@@ -98,19 +103,11 @@ class ServicioDAO:
             raise e
 
     def init_hojas_servicio_table(self):
-        """Asegura que la tabla de hojas de servicio exista."""
-        query = """
-        CREATE TABLE IF NOT EXISTS Hojas_de_Servicio (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            numero_orden TEXT,
-            fecha_creacion TEXT,
-            servicio_id INTEGER
-        )
-        """
+        """Asegura que la tabla de hojas de servicio exista (esquema completo; migración al inicio la alinea)."""
         try:
             conn = self.db.get_connection()
             cur = conn.cursor()
-            cur.execute(query)
+            cur.execute(HOJAS_CREATE_IF_NOT_EXISTS)
             conn.commit()
         except sqlite3.Error as e:
             print(f"Error al inicializar la tabla de Hojas_de_Servicio: {e}")
@@ -146,3 +143,81 @@ class ServicioDAO:
     def obtener_nuevo_numero_orden(self):
         """Alias de obtener_ultimo_numero_orden para compatibilidad."""
         return self.obtener_ultimo_numero_orden()
+
+    def obtener_id_servicio_realizado_por_servicio_y_cliente(self, nombre_servicio, nombre_cliente):
+        """ID de la fila en Servicios_realizados; el más reciente si hubiera duplicados de nombre."""
+        query = """
+            SELECT s.id FROM Servicios_realizados s
+            INNER JOIN Clientes c ON s.cliente_id = c.id
+            WHERE s.Servicio = ? AND c.nombre = ?
+            ORDER BY s.id DESC LIMIT 1
+        """
+        conn = self.db.get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(query, (nombre_servicio, nombre_cliente))
+            row = cursor.fetchone()
+            return row["id"] if row else None
+        except Exception as e:
+            print(f"Error al resolver id de servicio: {e}")
+            raise e
+
+    def registrar_hoja_servicio(
+        self,
+        numero_orden,
+        servicio_id=None,
+        *,
+        fecha_entrega=None,
+        fecha_instalacion=None,
+        falla=None,
+        diagnostico=None,
+        observaciones=None,
+        cantidad=None,
+        precio=None,
+        anticipo=None,
+        imei=None,
+        contrasena=None,
+        estados_equipo=None,
+        pruebas_json=None,
+        cliente_nombre=None,
+        equipo_nombre=None,
+        servicio_nombre=None,
+        ruta_pdf=None,
+    ):
+        """Registra una hoja de servicio emitida con todos los campos persistidos."""
+        self.init_hojas_servicio_table()
+        fecha_creacion = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        payload = {
+            "numero_orden": numero_orden,
+            "fecha_creacion": fecha_creacion,
+            "servicio_id": servicio_id,
+            "fecha_entrega": fecha_entrega,
+            "fecha_instalacion": fecha_instalacion,
+            "falla": falla,
+            "diagnostico": diagnostico,
+            "observaciones": observaciones,
+            "cantidad": cantidad,
+            "precio": precio,
+            "anticipo": anticipo,
+            "imei": imei,
+            "contrasena": contrasena,
+            "estados_equipo": estados_equipo,
+            "pruebas_json": pruebas_json,
+            "cliente_nombre": cliente_nombre,
+            "equipo_nombre": equipo_nombre,
+            "servicio_nombre": servicio_nombre,
+            "ruta_pdf": ruta_pdf,
+        }
+        cols = ", ".join(HOJAS_DATA_COLUMNS)
+        ph = ", ".join(["?"] * len(HOJAS_DATA_COLUMNS))
+        sql = f"INSERT INTO Hojas_de_Servicio ({cols}) VALUES ({ph})"
+        values = tuple(payload[c] for c in HOJAS_DATA_COLUMNS)
+        conn = self.db.get_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute(sql, values)
+            conn.commit()
+            return True
+        except Exception as e:
+            print(f"Error al registrar hoja de servicio: {e}")
+            raise e

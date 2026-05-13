@@ -1,6 +1,7 @@
 from tkinter import *
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
+import sqlite3
 from PIL import Image, ImageTk
 from utils.paths import get_resource_path
 from database.servicio_dao import ServicioDAO
@@ -8,6 +9,7 @@ from database.cliente_dao import ClienteDAO
 from utils.pdf_generator import PDFGenerator
 from database.config_dao import ConfigDAO
 import datetime
+import json
 import threading
 import sys
 import os
@@ -892,15 +894,30 @@ class Servicios_realizados(tk.Frame):
 
             # Guardar el nuevo número de orden en la base de datos
             try:
-                import sqlite3
-                conn = self.servicio_dao.db.get_connection()
-                cur = conn.cursor()
-                cur.execute(
-                    "INSERT INTO Hojas_de_Servicio (numero_orden, fecha_creacion) VALUES (?, datetime('now'))",
-                    (numero_orden,)
+                servicio_row_id = self.servicio_dao.obtener_id_servicio_realizado_por_servicio_y_cliente(
+                    servicio, cliente
                 )
-                conn.commit()
-            except sqlite3.Error as e:
+                self.servicio_dao.registrar_hoja_servicio(
+                    numero_orden,
+                    servicio_row_id,
+                    fecha_entrega=fecha_entrega,
+                    fecha_instalacion=fecha_instalacion,
+                    falla=falla,
+                    diagnostico=diagnostico,
+                    observaciones=observaciones,
+                    cantidad=cantidad,
+                    precio=precio,
+                    anticipo=anticipo,
+                    imei=imei,
+                    contrasena=contrasena,
+                    estados_equipo="|".join(estados_lista) if estados_lista else None,
+                    pruebas_json=json.dumps(pruebas_data, ensure_ascii=False),
+                    cliente_nombre=cliente,
+                    equipo_nombre=equipo,
+                    servicio_nombre=servicio,
+                    ruta_pdf=nombre_archivo,
+                )
+            except Exception as e:
                 messagebox.showerror("Error", f"No se pudo guardar el número de orden en la base de datos: {e}")
                 
             messagebox.showinfo("Éxito", f"Hoja de servicio guardada como: {nombre_archivo}")

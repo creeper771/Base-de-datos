@@ -7,6 +7,7 @@ from exportar import exportar_datos
 from PIL import Image, ImageTk
 import os
 import sys
+from database.db_manager import configure_sqlite_connection
 
 class GestorBase(ABC):
     """Clase abstracta base para gestores de datos"""
@@ -86,6 +87,7 @@ class GestorProductos(tk.Toplevel, GestorBase):
         try:
             self.tree.delete(*self.tree.get_children())
             conn = sqlite3.connect(self.db_name)
+            configure_sqlite_connection(conn)
             cursor = conn.cursor()
 
             cursor.execute("SELECT id, serie, producto, precio_cos, precio_ven, stock, estado FROM Inventario")
@@ -153,6 +155,7 @@ class GestorServicios(tk.Toplevel, GestorBase):
         try:
             self.tree.delete(*self.tree.get_children())
             conn = sqlite3.connect(self.db_name)
+            configure_sqlite_connection(conn)
             cursor = conn.cursor()
 
             cursor.execute("SELECT s.id, c.nombre, s.Nombre_equipo, s.Servicio, s.Precio, s.Fecha_de_recibo, s.Estado FROM Servicios_realizados s LEFT JOIN Clientes c ON s.cliente_id = c.id")

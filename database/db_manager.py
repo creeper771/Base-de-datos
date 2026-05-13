@@ -1,6 +1,12 @@
 import sqlite3
 import os
 
+
+def configure_sqlite_connection(conn):
+    """Activa integridad referencial en SQLite (debe ejecutarse por conexión)."""
+    conn.execute("PRAGMA foreign_keys = ON")
+
+
 class DBManager:
     _instance = None
     _connection = None
@@ -22,6 +28,7 @@ class DBManager:
             self._connection = sqlite3.connect(self.db_path)
             # Para poder acceder a las columnas por nombre en lugar de índice
             self._connection.row_factory = sqlite3.Row
+            configure_sqlite_connection(self._connection)
         except sqlite3.Error as e:
             print(f"Error al conectar con la base de datos: {e}")
 

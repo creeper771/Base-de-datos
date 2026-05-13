@@ -1,3 +1,5 @@
+import sqlite3
+
 from database.db_manager import DBManager
 
 class InventarioDAO:
@@ -103,6 +105,11 @@ class InventarioDAO:
             cursor.execute(query, (producto,))
             conn.commit()
             return True
+        except sqlite3.IntegrityError as e:
+            print(f"Error al eliminar el producto: {e}")
+            raise ValueError(
+                "No se puede eliminar el producto porque figura en ventas registradas."
+            ) from None
         except Exception as e:
             print(f"Error al eliminar el producto: {e}")
             raise e

@@ -1,39 +1,67 @@
 import os
 import io
 import datetime
-from tkinter import messagebox
 from PIL import Image
 
 try:
-    from reportlab.pdfgen import canvas
-    from reportlab.lib import colors
-    from reportlab.lib.pagesizes import letter
-    from reportlab.lib.utils import ImageReader
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.pdfgen import canvas as rl_canvas
+    from reportlab.lib import colors as rl_colors
+    from reportlab.lib.pagesizes import letter as rl_letter
+    from reportlab.lib.utils import ImageReader as rl_ImageReader
+    from reportlab.platypus import (
+        SimpleDocTemplate as rl_SimpleDocTemplate,
+        Paragraph as rl_Paragraph,
+        Spacer as rl_Spacer,
+        Table as rl_Table,
+        TableStyle as rl_TableStyle,
+    )
+    from reportlab.lib.styles import (
+        getSampleStyleSheet as rl_getSampleStyleSheet,
+        ParagraphStyle as rl_ParagraphStyle,
+    )
     from reportlab.platypus import Image as RLImage
-except ImportError:
-    print("reportlab no está instalado. Instálalo con: pip install reportlab")
+
+    _REPORTLAB_OK = True
+    _REPORTLAB_ERR = None
+except ImportError as _e:
+    rl_canvas = rl_colors = rl_letter = rl_ImageReader = None
+    rl_SimpleDocTemplate = rl_Paragraph = rl_Spacer = rl_Table = rl_TableStyle = None
+    rl_getSampleStyleSheet = rl_ParagraphStyle = RLImage = None
+    _REPORTLAB_OK = False
+    _REPORTLAB_ERR = _e
+
+
+def _require_reportlab():
+    if not _REPORTLAB_OK:
+        raise RuntimeError(
+            "Falta la librería ReportLab. Instálela con: pip install reportlab"
+        ) from _REPORTLAB_ERR
+
 
 class PDFGenerator:
     """Clase encargada de la generación de documentos PDF (Facturas y Hojas de Servicio)."""
-    
+
     @staticmethod
     def generar_factura_venta(datos_empresa, cliente, total_venta, productos_seleccionados, numero_factura):
         """Genera el PDF de la factura de venta."""
+        _require_reportlab()
         if not datos_empresa:
             raise ValueError("No se encontraron datos de la empresa.")
 
         empresa_nombre, direccion, telefono, email, atiende, logo_blob = datos_empresa
 
-        carpeta_facturas = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "Facturas")
+        carpeta_facturas = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "Facturas"
+        )
         if not os.path.exists(carpeta_facturas):
             os.makedirs(carpeta_facturas)
 
         fecha_actual = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        factura_path = os.path.join(carpeta_facturas, f"Factura_{numero_factura}_{fecha_actual}.pdf")
-        
-        c = canvas.Canvas(factura_path, pagesize=letter)
+        factura_path = os.path.join(
+            carpeta_facturas, f"Factura_{numero_factura}_{fecha_actual}.pdf"
+        )
+
+        c = rl_canvas.Canvas(factura_path, pagesize=rl_letter)
 
         # Prepara el logo
         if logo_blob:
@@ -41,19 +69,19 @@ class PDFGenerator:
                 logo_image = Image.open(io.BytesIO(logo_blob))
                 logo_image = logo_image.resize((100, 100))
                 logo_buffer = io.BytesIO()
-                logo_image.save(logo_buffer, format='PNG')
+                logo_image.save(logo_buffer, format="PNG")
                 logo_buffer.seek(0)
-                logo_reader = ImageReader(logo_buffer)
-                c.drawImage(logo_reader, 450, 700, width=100, height=100, mask='auto')
+                logo_reader = rl_ImageReader(logo_buffer)
+                c.drawImage(logo_reader, 450, 700, width=100, height=100, mask="auto")
             except Exception as e:
                 print("No se pudo cargar el logo en la factura:", e)
 
         # Datos de la empresa
         c.setFont("Helvetica-Bold", 18)
-        c.setFillColor(colors.darkblue)
+        c.setFillColor(rl_colors.darkblue)
         c.drawCentredString(300, 750, "Factura de Venta")
 
-        c.setFillColor(colors.black)
+        c.setFillColor(rl_colors.black)
         c.setFont("Helvetica-Bold", 12)
         c.drawString(50, 710, f"Empresa: {empresa_nombre}")
 
@@ -64,7 +92,7 @@ class PDFGenerator:
         c.drawString(50, 630, f"Atiende: {atiende}")
 
         c.setLineWidth(0.5)
-        c.setStrokeColor(colors.gray)
+        c.setStrokeColor(rl_colors.gray)
         c.line(50, 620, 550, 620)
 
         c.setFont("Helvetica", 12)
@@ -85,7 +113,7 @@ class PDFGenerator:
         c.line(50, y_offset - 10, 550, y_offset - 10)
         y_offset -= 30
         c.setFont("Helvetica", 12)
-        
+
         for item in productos_seleccionados:
             factura_id, cliente_nom, producto, precio, cantidad, total_cop, costo = item
             c.drawString(70, y_offset, str(producto))
@@ -98,9 +126,9 @@ class PDFGenerator:
         y_offset -= 20
 
         c.setFont("Helvetica-Bold", 14)
-        c.setFillColor(colors.darkblue)
+        c.setFillColor(rl_colors.darkblue)
         c.drawString(50, y_offset, f"Total a Pagar: ${total_venta:,.0f}")
-        c.setFillColor(colors.black)
+        c.setFillColor(rl_colors.black)
         c.setFont("Helvetica", 12)
 
         y_offset -= 20
@@ -111,19 +139,43 @@ class PDFGenerator:
 
         y_offset -= 100
         c.setFont("Helvetica", 10)
-        c.drawString(50, y_offset, "Este documento es una representación de la factura. Para cualquier consulta, contáctenos.")
+        c.drawString(
+            50,
+            y_offset,
+            "Este documento es una representación de la factura. Para cualquier consulta, contáctenos.",
+        )
         c.drawString(50, y_offset - 20, f"Teléfono: {telefono} | Email: {email}")
         c.drawString(50, y_offset - 40, f"Dirección: {direccion}")
         c.drawString(50, y_offset - 60, "Términos y condiciones:")
         c.drawString(50, y_offset - 80, "Los productos no tienen devolución.")
         c.drawString(50, y_offset - 100, "Conserve su factura para cualquier reclamo.")
-        
+
         c.save()
         return factura_path
 
     @staticmethod
-    def generar_hoja_servicio(datos_empresa, cliente, equipo, servicio, precio, falla, diagnostico, numero_orden, estado, fecha_entrega, fecha_instalacion, observaciones, cantidad, imei, contrasena, estados_equipo_lista, pruebas_data, anticipo):
+    def generar_hoja_servicio(
+        datos_empresa,
+        cliente,
+        equipo,
+        servicio,
+        precio,
+        falla,
+        diagnostico,
+        numero_orden,
+        estado,
+        fecha_entrega,
+        fecha_instalacion,
+        observaciones,
+        cantidad,
+        imei,
+        contrasena,
+        estados_equipo_lista,
+        pruebas_data,
+        anticipo,
+    ):
         """Genera el PDF de la hoja de servicio técnico usando Platypus."""
+        _require_reportlab()
         if not datos_empresa:
             empresa_nombre = "NOMBRE DE LA EMPRESA"
             direccion = "DIRECCIÓN"
@@ -137,25 +189,29 @@ class PDFGenerator:
         total = cantidad * precio
         resto = total - anticipo
 
-        carpeta_hojas = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "hojas_de_servicio")
+        carpeta_hojas = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "hojas_de_servicio"
+        )
         if not os.path.exists(carpeta_hojas):
             os.makedirs(carpeta_hojas)
 
         nombre_archivo = os.path.join(carpeta_hojas, f"Hoja_Servicio_{numero_orden}.pdf")
-        
-        doc = SimpleDocTemplate(
+
+        doc = rl_SimpleDocTemplate(
             nombre_archivo,
-            pagesize=letter,
+            pagesize=rl_letter,
             rightMargin=36,
             leftMargin=36,
             topMargin=36,
-            bottomMargin=36
+            bottomMargin=36,
         )
 
         elementos = []
-        estilos = getSampleStyleSheet()
-        estilo_titulo = ParagraphStyle('CustomTitle', parent=estilos['Title'], fontSize=16, spaceAfter=30, alignment=1)
-        estilo_normal = estilos['Normal']
+        estilos = rl_getSampleStyleSheet()
+        estilo_titulo = rl_ParagraphStyle(
+            "CustomTitle", parent=estilos["Title"], fontSize=16, spaceAfter=30, alignment=1
+        )
+        estilo_normal = estilos["Normal"]
 
         # Prepara el logo
         logo_flowable = None
@@ -164,195 +220,234 @@ class PDFGenerator:
                 logo_image = Image.open(io.BytesIO(logo_blob))
                 logo_image = logo_image.resize((80, 80))
                 logo_buffer = io.BytesIO()
-                logo_image.save(logo_buffer, format='PNG')
+                logo_image.save(logo_buffer, format="PNG")
                 logo_buffer.seek(0)
                 logo_flowable = RLImage(logo_buffer, width=80, height=80)
             except Exception as e:
                 print("No se pudo cargar el logo en la hoja de servicio:", e)
 
         datos_empresa_formato = [
-            Paragraph(f"<b>{empresa_nombre}</b>", estilo_normal),
-            Paragraph(f"Dirección: {direccion}", estilo_normal),
-            Paragraph(f"Teléfono: {telefono}", estilo_normal),
-            Paragraph(f"Email: {email}", estilo_normal)
+            rl_Paragraph(f"<b>{empresa_nombre}</b>", estilo_normal),
+            rl_Paragraph(f"Dirección: {direccion}", estilo_normal),
+            rl_Paragraph(f"Teléfono: {telefono}", estilo_normal),
+            rl_Paragraph(f"Email: {email}", estilo_normal),
         ]
 
         if logo_flowable:
-            tabla_encabezado = Table([[logo_flowable, datos_empresa_formato]], colWidths=[100, 400])
+            tabla_encabezado = rl_Table([[logo_flowable, datos_empresa_formato]], colWidths=[100, 400])
         else:
-            tabla_encabezado = Table([["", datos_empresa_formato]], colWidths=[100, 400])
-        
-        tabla_encabezado.setStyle(TableStyle([
-            ('ALIGN', (0, 0), (0, 0), 'LEFT'),
-            ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ]))
-        elementos.append(tabla_encabezado)
-        elementos.append(Spacer(1, 20))
+            tabla_encabezado = rl_Table([["", datos_empresa_formato]], colWidths=[100, 400])
 
-        elementos.append(Paragraph(f"<b>HOJA DE SERVICIO - ORDEN {numero_orden}</b>", estilo_titulo))
+        tabla_encabezado.setStyle(
+            rl_TableStyle(
+                [
+                    ("ALIGN", (0, 0), (0, 0), "LEFT"),
+                    ("ALIGN", (1, 0), (1, 0), "RIGHT"),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ]
+            )
+        )
+        elementos.append(tabla_encabezado)
+        elementos.append(rl_Spacer(1, 20))
+
+        elementos.append(
+            rl_Paragraph(f"<b>HOJA DE SERVICIO - ORDEN {numero_orden}</b>", estilo_titulo)
+        )
 
         datos_cliente = [
-            ['Cliente:', cliente, 'Equipo:', equipo],
-            ['Servicio:', servicio, 'Estado Pruebas:', estado],
-            ['IMEI:', imei, 'Contraseña:', contrasena]
+            ["Cliente:", cliente, "Equipo:", equipo],
+            ["Servicio:", servicio, "Estado Pruebas:", estado],
+            ["IMEI:", imei, "Contraseña:", contrasena],
         ]
-        
-        tabla_cliente = Table(datos_cliente, colWidths=[100, 170, 100, 170])
-        tabla_cliente.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, -1), colors.white),
-            ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-            ('FONTNAME', (2, 0), (2, -1), 'Helvetica-Bold'),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-            ('GRID', (0, 0), (-1, -1), 1, colors.grey),
-        ]))
+
+        tabla_cliente = rl_Table(datos_cliente, colWidths=[100, 170, 100, 170])
+        tabla_cliente.setStyle(
+            rl_TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, -1), rl_colors.white),
+                    ("TEXTCOLOR", (0, 0), (-1, -1), rl_colors.black),
+                    ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+                    ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+                    ("FONTNAME", (2, 0), (2, -1), "Helvetica-Bold"),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
+                    ("GRID", (0, 0), (-1, -1), 1, rl_colors.grey),
+                ]
+            )
+        )
         elementos.append(tabla_cliente)
-        elementos.append(Spacer(1, 20))
+        elementos.append(rl_Spacer(1, 20))
 
         datos_fechas = [
-            ['Fecha Recepción:', datetime.datetime.now().strftime("%Y-%m-%d"), 'Fecha Entrega:', fecha_entrega],
-            ['Fecha Instalación:', fecha_instalacion, '', '']
+            [
+                "Fecha Recepción:",
+                datetime.datetime.now().strftime("%Y-%m-%d"),
+                "Fecha Entrega:",
+                fecha_entrega,
+            ],
+            ["Fecha Instalación:", fecha_instalacion, "", ""],
         ]
-        
-        tabla_fechas = Table(datos_fechas, colWidths=[100, 170, 100, 170])
-        tabla_fechas.setStyle(TableStyle([
-            ('GRID', (0, 0), (-1, -1), 1, colors.grey),
-            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-            ('FONTNAME', (2, 0), (2, -1), 'Helvetica-Bold'),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-        ]))
+
+        tabla_fechas = rl_Table(datos_fechas, colWidths=[100, 170, 100, 170])
+        tabla_fechas.setStyle(
+            rl_TableStyle(
+                [
+                    ("GRID", (0, 0), (-1, -1), 1, rl_colors.grey),
+                    ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+                    ("FONTNAME", (2, 0), (2, -1), "Helvetica-Bold"),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
+                ]
+            )
+        )
         elementos.append(tabla_fechas)
-        elementos.append(Spacer(1, 20))
+        elementos.append(rl_Spacer(1, 20))
 
         if estados_equipo_lista:
-            elementos.append(Paragraph("<b>Condiciones de Recepción del Equipo:</b>", estilo_normal))
-            elementos.append(Spacer(1, 10))
-            
+            elementos.append(
+                rl_Paragraph("<b>Condiciones de Recepción del Equipo:</b>", estilo_normal)
+            )
+            elementos.append(rl_Spacer(1, 10))
+
             items_por_fila = 3
             datos_estados = []
             fila_actual = []
-            
+
             for estado_eq in estados_equipo_lista:
                 estado_texto = f"[X] {estado_eq}"
                 fila_actual.append(estado_texto)
-                
+
                 if len(fila_actual) == items_por_fila:
                     datos_estados.append(fila_actual)
                     fila_actual = []
-            
+
             if fila_actual:
                 while len(fila_actual) < items_por_fila:
                     fila_actual.append("")
                 datos_estados.append(fila_actual)
-            
-            if datos_estados:
-                tabla_estados = Table(datos_estados, colWidths=[180, 180, 180])
-                tabla_estados.setStyle(TableStyle([
-                    ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
-                    ('FONTSIZE', (0, 0), (-1, -1), 9),
-                    ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-                ]))
-                elementos.append(tabla_estados)
-                elementos.append(Spacer(1, 20))
 
-        elementos.append(Paragraph("<b>Detalles del Servicio:</b>", estilo_normal))
-        elementos.append(Spacer(1, 10))
-        
+            if datos_estados:
+                tabla_estados = rl_Table(datos_estados, colWidths=[180, 180, 180])
+                tabla_estados.setStyle(
+                    rl_TableStyle(
+                        [
+                            ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
+                            ("FONTSIZE", (0, 0), (-1, -1), 9),
+                            ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+                        ]
+                    )
+                )
+                elementos.append(tabla_estados)
+                elementos.append(rl_Spacer(1, 20))
+
+        elementos.append(rl_Paragraph("<b>Detalles del Servicio:</b>", estilo_normal))
+        elementos.append(rl_Spacer(1, 10))
+
         datos_detalles = [
-            ['Falla Reportada:', Paragraph(falla, estilo_normal)],
-            ['Diagnóstico:', Paragraph(diagnostico, estilo_normal)],
-            ['Observaciones:', Paragraph(observaciones, estilo_normal)]
+            ["Falla Reportada:", rl_Paragraph(falla, estilo_normal)],
+            ["Diagnóstico:", rl_Paragraph(diagnostico, estilo_normal)],
+            ["Observaciones:", rl_Paragraph(observaciones, estilo_normal)],
         ]
-        
-        tabla_detalles = Table(datos_detalles, colWidths=[100, 440])
-        tabla_detalles.setStyle(TableStyle([
-            ('GRID', (0, 0), (-1, -1), 1, colors.grey),
-            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-        ]))
+
+        tabla_detalles = rl_Table(datos_detalles, colWidths=[100, 440])
+        tabla_detalles.setStyle(
+            rl_TableStyle(
+                [
+                    ("GRID", (0, 0), (-1, -1), 1, rl_colors.grey),
+                    ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
+                ]
+            )
+        )
         elementos.append(tabla_detalles)
-        elementos.append(Spacer(1, 20))
+        elementos.append(rl_Spacer(1, 20))
 
         if pruebas_data:
             datos_pruebas = [
-                ['PRUEBAS DE FUNCIONAMIENTO', '', '', '', '', ''],
-                ['Prueba', 'Ingreso', 'Egreso', 'Prueba', 'Ingreso', 'Egreso'],
+                ["PRUEBAS DE FUNCIONAMIENTO", "", "", "", "", ""],
+                ["Prueba", "Ingreso", "Egreso", "Prueba", "Ingreso", "Egreso"],
             ]
-            
+
             n = len(pruebas_data)
             i = 0
             while i < n:
                 fila = []
-                # Primera prueba del par
                 prueba1 = pruebas_data[i]
-                fila.extend([prueba1['nombre'], prueba1['ingreso'], prueba1['egreso']])
-                # Segunda prueba del par (si existe)
+                fila.extend([prueba1["nombre"], prueba1["ingreso"], prueba1["egreso"]])
                 if i + 1 < n:
                     prueba2 = pruebas_data[i + 1]
-                    fila.extend([prueba2['nombre'], prueba2['ingreso'], prueba2['egreso']])
+                    fila.extend([prueba2["nombre"], prueba2["ingreso"], prueba2["egreso"]])
                 else:
-                    fila.extend(['', '', ''])
+                    fila.extend(["", "", ""])
                 datos_pruebas.append(fila)
                 i += 2
 
-            tabla_pruebas = Table(datos_pruebas, colWidths=[120, 45, 45, 120, 45, 45])
-            tabla_pruebas.setStyle(TableStyle([
-                ('SPAN', (0, 0), (5, 0)),
-                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('ALIGN', (0, 2), (0, -1), 'LEFT'),
-                ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
-                ('FONTSIZE', (0, 0), (-1, -1), 10),
-                ('GRID', (0, 0), (-1, -1), 1, colors.black),
-                ('BOX', (0, 0), (-1, -1), 2, colors.black),
-                ('BACKGROUND', (0, 0), (5, 0), colors.lightgrey),
-                ('BACKGROUND', (0, 1), (5, 1), colors.lightgrey),
-                ('FONTNAME', (0, 0), (5, 1), 'Helvetica-Bold'),
-            ]))
+            tabla_pruebas = rl_Table(datos_pruebas, colWidths=[120, 45, 45, 120, 45, 45])
+            tabla_pruebas.setStyle(
+                rl_TableStyle(
+                    [
+                        ("SPAN", (0, 0), (5, 0)),
+                        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                        ("ALIGN", (0, 2), (0, -1), "LEFT"),
+                        ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
+                        ("FONTSIZE", (0, 0), (-1, -1), 10),
+                        ("GRID", (0, 0), (-1, -1), 1, rl_colors.black),
+                        ("BOX", (0, 0), (-1, -1), 2, rl_colors.black),
+                        ("BACKGROUND", (0, 0), (5, 0), rl_colors.lightgrey),
+                        ("BACKGROUND", (0, 1), (5, 1), rl_colors.lightgrey),
+                        ("FONTNAME", (0, 0), (5, 1), "Helvetica-Bold"),
+                    ]
+                )
+            )
             elementos.append(tabla_pruebas)
-            elementos.append(Spacer(1, 20))
+            elementos.append(rl_Spacer(1, 20))
 
         datos_costos = [
-            ['Cantidad:', str(cantidad), 'Precio Unitario:', f"${precio:,.0f}"],
-            ['Anticipo:', f"${anticipo:,.0f}", 'Total a Pagar:', f"${total:,.0f}"],
-            ['Restante:', f"${resto:,.0f}", '', '']
+            ["Cantidad:", str(cantidad), "Precio Unitario:", f"${precio:,.0f}"],
+            ["Anticipo:", f"${anticipo:,.0f}", "Total a Pagar:", f"${total:,.0f}"],
+            ["Restante:", f"${resto:,.0f}", "", ""],
         ]
-        
-        tabla_costos = Table(datos_costos, colWidths=[100, 170, 100, 170])
-        tabla_costos.setStyle(TableStyle([
-            ('GRID', (0, 0), (-1, -1), 1, colors.grey),
-            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-            ('FONTNAME', (2, 0), (2, -1), 'Helvetica-Bold'),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-        ]))
+
+        tabla_costos = rl_Table(datos_costos, colWidths=[100, 170, 100, 170])
+        tabla_costos.setStyle(
+            rl_TableStyle(
+                [
+                    ("GRID", (0, 0), (-1, -1), 1, rl_colors.grey),
+                    ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+                    ("FONTNAME", (2, 0), (2, -1), "Helvetica-Bold"),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
+                ]
+            )
+        )
         elementos.append(tabla_costos)
-        elementos.append(Spacer(1, 40))
+        elementos.append(rl_Spacer(1, 40))
 
         datos_firmas = [
-            ['_______________________', '_______________________'],
-            ['Firma del Cliente', 'Firma del Técnico']
+            ["_______________________", "_______________________"],
+            ["Firma del Cliente", "Firma del Técnico"],
         ]
-        
-        tabla_firmas = Table(datos_firmas, colWidths=[270, 270])
-        tabla_firmas.setStyle(TableStyle([
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 1), (-1, 1), 'Helvetica-Bold'),
-        ]))
+
+        tabla_firmas = rl_Table(datos_firmas, colWidths=[270, 270])
+        tabla_firmas.setStyle(
+            rl_TableStyle(
+                [
+                    ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                    ("FONTNAME", (0, 1), (-1, 1), "Helvetica-Bold"),
+                ]
+            )
+        )
         elementos.append(tabla_firmas)
-        elementos.append(Spacer(1, 20))
-        
+        elementos.append(rl_Spacer(1, 20))
+
         terminos = [
             "Términos y Condiciones:",
             "1. Todo equipo reparado cuenta con 30 días de garantía sobre la reparación efectuada.",
             "2. La garantía no cubre daños por humedad, golpes, sobrecargas eléctricas o mal uso.",
             "3. Pasados 30 días de la notificación de reparación, el equipo causará recargos por almacenaje.",
-            "4. Después de 60 días, la empresa no se hace responsable por el equipo."
+            "4. Después de 60 días, la empresa no se hace responsable por el equipo.",
         ]
-        
+
         for termino in terminos:
-            elementos.append(Paragraph(f"<font size=8>{termino}</font>", estilo_normal))
-        
+            elementos.append(rl_Paragraph(f"<font size=8>{termino}</font>", estilo_normal))
+
         doc.build(elementos)
         return nombre_archivo

@@ -7,8 +7,12 @@ import sys
 import os
 from ttkthemes import ThemedStyle
 from utils.paths import get_resource_path
+from database.startup_migrations import run_startup_migrations
+
+
 class Manager(Tk):
     def __init__(self, *args, **kwagrs):
+        run_startup_migrations()
         super().__init__(*args, **kwagrs)
         self.title("Sistema de Gestión de Inventarios, Ventas y Servicios")
         self.geometry("1100x650+120+20")

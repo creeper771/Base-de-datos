@@ -1,3 +1,5 @@
+import sqlite3
+
 from database.db_manager import DBManager
 
 class ClienteDAO:
@@ -77,6 +79,11 @@ class ClienteDAO:
             cursor.execute(query, (id_cliente,))
             conn.commit()
             return True
+        except sqlite3.IntegrityError as e:
+            print(f"Error al eliminar el cliente: {e}")
+            raise ValueError(
+                "No se puede eliminar el cliente porque tiene ventas u órdenes de servicio asociadas."
+            ) from None
         except Exception as e:
             print(f"Error al eliminar el cliente: {e}")
             raise e
