@@ -55,10 +55,10 @@ class Inventario(Servicios_realizados):
         self.label7 = tk.Label(lblframe_seleccion, text="No. Serie:", font="arial 12", bg="#85c1e9", wraplength=300)
         self.label7.place(x=5, y=30)
 
-        self.label2 = tk.Label(lblframe_seleccion, text="Precio costo:", font="arial 12", bg="#85c1e9", wraplength=300)
+        self.label2 = tk.Label(lblframe_seleccion, text="P. Compra:", font="arial 12", bg="#85c1e9", wraplength=300)
         self.label2.place(x=5, y=55)
 
-        self.label3 = tk.Label(lblframe_seleccion, text="Precio venta:", font="arial 12", bg="#85c1e9")
+        self.label3 = tk.Label(lblframe_seleccion, text="P. Venta:", font="arial 12", bg="#85c1e9")
         self.label3.place(x=5, y=80)
 
         self.label4 = tk.Label(lblframe_seleccion, text="Stock:", font="arial 12", bg="#85c1e9")
